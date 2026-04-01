@@ -55,7 +55,7 @@ struct SettingsView: View {
                             Text("每 1 小时").tag(60)
                             Text("不自动同步").tag(0)
                         }
-                        .onChange(of: syncInterval) { _, new in
+                        .onChange(of: syncInterval) { new in
                             eLearning.startAutoSync(intervalMinutes: new)
                         }
 
