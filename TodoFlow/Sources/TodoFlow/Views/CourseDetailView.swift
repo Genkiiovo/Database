@@ -1,106 +1,107 @@
 import SwiftUI
 
-// MARK: - CourseDetailView
+// MARK: - CourseDetailView  (full-page, no tabs)
 
 struct CourseDetailView: View {
-    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var store: AppStore
     @EnvironmentObject var eLearning: ELearningService
 
     let course: Course
 
-    @State private var section: Section = .assignments
     @State private var showAddAssignment = false
-    @State private var showEditCourse = false
-
-    enum Section: String, CaseIterable {
-        case assignments = "作业 & DDL"
-        case files       = "本地文件"
-        case elearning   = "eLearning"
-    }
+    @State private var showEditCourse    = false
 
     private var live: Course { store.courses.first { $0.id == course.id } ?? course }
 
     var body: some View {
-        VStack(spacing: 0) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
 
-            // ── Header ─────────────────────────────────────────
-            HStack(spacing: 0) {
-                Rectangle()
-                    .fill(Color(hex: live.colorHex))
-                    .frame(width: 5)
+                // ── Course header ──────────────────────────────
+                HStack(spacing: 0) {
+                    Rectangle()
+                        .fill(Color(hex: live.colorHex))
+                        .frame(width: 5)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text(live.code)
-                            .font(Theme.captionFont).fontWeight(.semibold)
+                            .font(Theme.englishBodyFont)
+                            .fontWeight(.semibold)
                             .foregroundColor(Color(hex: live.colorHex))
                             .padding(.horizontal, 8).padding(.vertical, 3)
                             .background(Color(hex: live.colorHex).opacity(0.1))
                             .cornerRadius(5)
-                        Spacer()
-                        Button { showEditCourse = true } label: {
-                            Image(systemName: "pencil")
-                                .foregroundColor(Theme.textTertiary)
-                        }
-                        .buttonStyle(.plain)
-                        Button { dismiss() } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(Theme.textTertiary)
-                        }
-                        .buttonStyle(.plain)
+                        Text(live.name)
+                            .font(Theme.titleFont)
+                            .foregroundColor(Theme.textPrimary)
+                        Text(live.professor)
+                            .font(Theme.englishBodyFont)
+                            .foregroundColor(Theme.textSecondary)
                     }
-                    Text(live.name)
-                        .font(Theme.titleFont)
-                        .foregroundColor(Theme.textPrimary)
-                    Text(live.professor)
-                        .font(Theme.bodyFont)
-                        .foregroundColor(Theme.textSecondary)
-                }
-                .padding(20)
-            }
-            .background(Color(hex: live.colorHex).opacity(0.05))
+                    .padding(20)
 
-            // ── Tab bar ────────────────────────────────────────
-            HStack(spacing: 0) {
-                ForEach(Section.allCases, id: \.self) { s in
-                    Button { section = s } label: {
-                        VStack(spacing: 0) {
-                            Text(s.rawValue)
-                                .font(.system(size: 13, weight: section == s ? .semibold : .regular))
-                                .foregroundColor(section == s ? Theme.accent : Theme.textSecondary)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                            Rectangle()
-                                .fill(section == s ? Theme.accent : Color.clear)
-                                .frame(height: 2)
-                        }
-                    }
-                    .buttonStyle(.plain)
+                    Spacer()
                 }
-                Spacer()
-            }
-            .padding(.horizontal, 8)
-            Divider()
+                .background(Color(hex: live.colorHex).opacity(0.05))
 
-            // ── Content ────────────────────────────────────────
-            ScrollView {
-                switch section {
-                case .assignments: AssignmentsSection(course: live, showAddAssignment: $showAddAssignment)
-                case .files:       FilesSection(course: live)
-                case .elearning:   ELearningSection(course: live)
+                // ── 作业 & DDL ─────────────────────────────────
+                PageSectionHeader(title: "作业 & DDL", icon: "checklist")
+                AssignmentsSection(course: live, showAddAssignment: $showAddAssignment)
+
+                // ── 本地文件 ───────────────────────────────────
+                PageSectionHeader(title: "本地文件", icon: "folder")
+                FilesSection(course: live)
+
+                // ── eLearning ──────────────────────────────────
+                PageSectionHeader(title: "eLearning", icon: "link")
+                ELearningSection(course: live)
+
+                Spacer(minLength: 60)
+            }
+        }
+        .background(Theme.background)
+        .navigationTitle(live.name)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { showEditCourse = true } label: {
+                    Label("编辑课程", systemImage: "pencil")
                 }
             }
         }
-        .frame(minWidth: 720, minHeight: 520)
-        .background(Theme.background)
         .sheet(isPresented: $showAddAssignment) {
             AddAssignmentSheet(courseId: live.id).environmentObject(store)
         }
         .sheet(isPresented: $showEditCourse) {
             EditCourseSheet(course: live).environmentObject(store)
         }
+    }
+}
+
+// MARK: - Page Section Header
+
+struct PageSectionHeader: View {
+    let title: String
+    let icon: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(Theme.accent)
+            Text(title)
+                .font(Font.custom("Songti SC", size: 20).weight(.semibold))
+                .foregroundColor(Theme.textPrimary)
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 32)
+        .padding(.bottom, 2)
+
+        Rectangle()
+            .fill(Theme.divider)
+            .frame(height: 1.5)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 8)
     }
 }
 
@@ -126,7 +127,7 @@ struct AssignmentsSection: View {
                 }
                 .buttonStyle(.borderedProminent).tint(Theme.accent)
             }
-            .padding(.horizontal, 24).padding(.top, 20)
+            .padding(.horizontal, 24).padding(.top, 12)
 
             if pending.isEmpty {
                 EmptyPlaceholder(icon: "checkmark.circle", title: "没有待完成的作业", subtitle: "添加新作业或从 eLearning 同步")
@@ -150,8 +151,6 @@ struct AssignmentsSection: View {
                     }
                 }
             }
-
-            Spacer(minLength: 40)
         }
     }
 }
@@ -240,8 +239,6 @@ struct FilesSection: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("本地文件")
-                        .font(Theme.headlineFont).foregroundColor(Theme.textPrimary)
                     Text(folderPath)
                         .font(Theme.captionFont).foregroundColor(Theme.textTertiary)
                         .lineLimit(1).truncationMode(.middle)
@@ -252,7 +249,7 @@ struct FilesSection: View {
                 Button("打开文件夹") { FileService.openFolder(at: folderPath) }
                     .buttonStyle(.bordered)
             }
-            .padding(.horizontal, 24).padding(.top, 20)
+            .padding(.horizontal, 24).padding(.top, 12)
 
             if !FileService.folderExists(at: folderPath) {
                 EmptyPlaceholder(
@@ -267,7 +264,6 @@ struct FilesSection: View {
                     subtitle: "将课程文件放入桌面「\(course.name)」文件夹"
                 )
             } else {
-                // Category filter chips
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         FilterChip(label: "全部 (\(files.count))", isSelected: selectedCategory == nil)
@@ -292,8 +288,6 @@ struct FilesSection: View {
                     }
                 }
             }
-
-            Spacer(minLength: 40)
         }
         .onAppear { files = FileService.files(at: folderPath) }
     }
@@ -361,8 +355,6 @@ struct ELearningSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("eLearning 内容")
-                    .font(Theme.headlineFont).foregroundColor(Theme.textPrimary)
                 Spacer()
                 if eLearning.isLoading {
                     ProgressView().scaleEffect(0.7)
@@ -371,7 +363,7 @@ struct ELearningSection: View {
                         .buttonStyle(.bordered)
                 }
             }
-            .padding(.horizontal, 24).padding(.top, 20)
+            .padding(.horizontal, 24).padding(.top, 12)
 
             if !eLearning.isLoggedIn {
                 EmptyPlaceholder(icon: "lock", title: "未登录 eLearning", subtitle: "请在「设置」中登录 Fudan eLearning")

@@ -7,7 +7,6 @@ struct CoursesView: View {
     @EnvironmentObject var eLearning: ELearningService
 
     @State private var showAddCourse = false
-    @State private var selectedCourse: Course?
 
     private let columns = [
         GridItem(.flexible(), spacing: 16),
@@ -50,8 +49,14 @@ struct CoursesView: View {
                 } else {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(store.courses) { course in
-                            CourseCard(course: course)
-                                .onTapGesture { selectedCourse = course }
+                            NavigationLink {
+                                CourseDetailView(course: course)
+                                    .environmentObject(store)
+                                    .environmentObject(eLearning)
+                            } label: {
+                                CourseCard(course: course)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal, 24)
@@ -63,11 +68,6 @@ struct CoursesView: View {
         .background(Theme.background)
         .sheet(isPresented: $showAddCourse) {
             AddCourseSheet().environmentObject(store)
-        }
-        .sheet(item: $selectedCourse) { course in
-            CourseDetailView(course: course)
-                .environmentObject(store)
-                .environmentObject(eLearning)
         }
     }
 
@@ -103,7 +103,7 @@ struct CourseCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(course.code)
-                        .font(Theme.captionFont)
+                        .font(Theme.englishBodyFont)
                         .fontWeight(.semibold)
                         .foregroundColor(Color(hex: course.colorHex))
                         .padding(.horizontal, 8)
@@ -111,14 +111,6 @@ struct CourseCard: View {
                         .background(Color(hex: course.colorHex).opacity(0.12))
                         .cornerRadius(5)
                     Spacer()
-                    if pending > 0 {
-                        Text("\(pending)")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(width: 19, height: 19)
-                            .background(Theme.danger)
-                            .clipShape(Circle())
-                    }
                 }
 
                 Text(course.name)

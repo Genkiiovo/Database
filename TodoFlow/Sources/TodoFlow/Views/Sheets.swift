@@ -1,4 +1,18 @@
 import SwiftUI
+import AppKit
+
+// Forces the sheet's NSWindow to become key so TextFields accept input.
+// This is needed because NavigationSplitView retains key-window status on macOS.
+private struct SheetWindowFocuser: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let v = NSView()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            v.window?.makeKey()
+        }
+        return v
+    }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
 
 // ─────────────────────────────────────────────
 // MARK: - AddCourseSheet
@@ -359,6 +373,7 @@ struct SheetContainer<Content: View, Trailing: View>: View {
         }
         .frame(minWidth: 460, maxWidth: 520)
         .background(Theme.background)
+        .background(SheetWindowFocuser())
     }
 }
 

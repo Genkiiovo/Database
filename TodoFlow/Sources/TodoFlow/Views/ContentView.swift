@@ -30,10 +30,12 @@ struct ContentView: View {
             SidebarView(selectedTab: $selectedTab, showSettings: $showSettings)
                 .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 260)
         } detail: {
-            switch selectedTab {
-            case .calendar:   CalendarView()
-            case .courses:    CoursesView()
-            case .activities: ActivitiesView()
+            NavigationStack {
+                switch selectedTab {
+                case .calendar:   CalendarView()
+                case .courses:    CoursesView()
+                case .activities: ActivitiesView()
+                }
             }
         }
         .navigationSplitViewStyle(.prominentDetail)

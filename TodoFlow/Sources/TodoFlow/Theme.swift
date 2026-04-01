@@ -54,12 +54,16 @@ enum Theme {
     static let stickyGreen  = Color(hex: "BBF7D0")
     static let stickyPurple = Color(hex: "E9D5FF")
 
-    // Typography
-    static let titleFont    = Font.system(size: 24, weight: .semibold)
-    static let headlineFont = Font.system(size: 16, weight: .semibold)
-    static let bodyFont     = Font.system(size: 14, weight: .regular)
-    static let captionFont  = Font.system(size: 12, weight: .regular)
-    static let smallFont    = Font.system(size: 11, weight: .medium)
+    // Typography — Chinese: Songti SC (宋体简), English: Times New Roman
+    static let titleFont    = Font.custom("Songti SC", size: 24).weight(.semibold)
+    static let headlineFont = Font.custom("Songti SC", size: 16).weight(.semibold)
+    static let bodyFont     = Font.custom("Songti SC", size: 14)
+    static let captionFont  = Font.custom("Songti SC", size: 12)
+    static let smallFont    = Font.custom("Songti SC", size: 11).weight(.medium)
+
+    // English-specific typography (course codes, professor names, etc.)
+    static let englishBodyFont    = Font.custom("Times New Roman", size: 14)
+    static let englishHeadFont    = Font.custom("Times New Roman", size: 16)
 
     // Layout
     static let cornerRadius: CGFloat = 12
