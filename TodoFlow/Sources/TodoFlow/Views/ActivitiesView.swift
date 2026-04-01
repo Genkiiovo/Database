@@ -1,0 +1,306 @@
+import SwiftUI
+
+// MARK: - ActivitiesView
+
+struct ActivitiesView: View {
+    @EnvironmentObject var store: AppStore
+
+    @State private var showAddActivity = false
+
+    private let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
+
+    // Unique categories present in data, preserving insertion order
+    private var categories: [String] {
+        var seen = Set<String>()
+        return store.activities.compactMap { seen.insert($0.category).inserted ? $0.category : nil }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.sectionSpacing) {
+
+                // ── Header ──────────────────────────────────────
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("活动 & 项目")
+                            .font(Theme.titleFont).foregroundColor(Theme.textPrimary)
+                        Text("\(store.activities.count) 项进行中")
+                            .font(Theme.bodyFont).foregroundColor(Theme.textSecondary)
+                    }
+                    Spacer()
+                    Button { showAddActivity = true } label: {
+                        Label("添加", systemImage: "plus")
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .buttonStyle(.borderedProminent).tint(Theme.accent)
+                }
+                .padding(.horizontal, 24).padding(.top, 24)
+
+                if store.activities.isEmpty {
+                    EmptyPlaceholder(icon: "target", title: "还没有活动或项目", subtitle: "点击「添加」创建你的第一个项目")
+                } else {
+                    ForEach(categories, id: \.self) { cat in
+                        let items = store.activities.filter { $0.category == cat }
+                        if !items.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: Activity.icon(for: cat))
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(Color(hex: Activity.colorHex(for: cat)))
+                                    Text(cat)
+                                        .sectionHeader()
+                                }
+                                .padding(.horizontal, 24)
+
+                                LazyVGrid(columns: columns, spacing: 16) {
+                                    ForEach(items) { activity in
+                                        NavigationLink {
+                                            ActivityDetailView(activity: activity)
+                                                .environmentObject(store)
+                                        } label: {
+                                            ActivityCard(activity: activity)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.horizontal, 24)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(minLength: 40)
+            }
+        }
+        .background(Theme.background)
+        .sheet(isPresented: $showAddActivity) {
+            AddActivitySheet().environmentObject(store)
+        }
+    }
+}
+
+// MARK: - ActivityCard
+
+struct ActivityCard: View {
+    let activity: Activity
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label(activity.category, systemImage: Activity.icon(for: activity.category))
+                    .font(Theme.captionFont).fontWeight(.semibold)
+                    .foregroundColor(Color(hex: Activity.colorHex(for: activity.category)))
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Color(hex: Activity.colorHex(for: activity.category)).opacity(0.1))
+                    .cornerRadius(5)
+                Spacer()
+                if !activity.stickyNotes.isEmpty {
+                    HStack(spacing: 3) {
+                        Image(systemName: "note.text").font(.system(size: 10))
+                        Text("\(activity.stickyNotes.count)").font(.system(size: 10))
+                    }
+                    .foregroundColor(Theme.textTertiary)
+                }
+            }
+
+            Text(activity.title)
+                .font(Font.custom("Songti SC", size: 15).weight(.semibold))
+                .foregroundColor(Theme.textPrimary)
+                .lineLimit(2)
+
+            if !activity.description.isEmpty {
+                Text(activity.description)
+                    .font(Theme.captionFont).foregroundColor(Theme.textSecondary)
+                    .lineLimit(2)
+            }
+
+            HStack(spacing: 6) {
+                Image(systemName: "calendar").font(.system(size: 10)).foregroundColor(Theme.textTertiary)
+                Text(activity.startDate, style: .date).font(Theme.captionFont).foregroundColor(Theme.textTertiary)
+                if let end = activity.endDate {
+                    Text("→").font(Theme.captionFont).foregroundColor(Theme.textTertiary)
+                    Text(end, style: .date).font(Theme.captionFont).foregroundColor(Theme.textTertiary)
+                }
+                Spacer()
+            }
+
+            if let note = activity.stickyNotes.first {
+                Text(note.content)
+                    .font(Theme.captionFont).foregroundColor(Theme.textPrimary)
+                    .lineLimit(2)
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.stickyColor(note.colorName))
+                    .cornerRadius(6)
+            }
+        }
+        .padding(Theme.cardPadding)
+        .cardStyle()
+    }
+}
+
+// MARK: - ActivityDetailView  (full page)
+
+struct ActivityDetailView: View {
+    @EnvironmentObject var store: AppStore
+
+    let activity: Activity
+
+    @State private var showAddNote = false
+
+    private var live: Activity { store.activities.first { $0.id == activity.id } ?? activity }
+
+    private let noteColumns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+    ]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+
+                // ── Header ─────────────────────────────────────
+                VStack(alignment: .leading, spacing: 6) {
+                    Label(live.category, systemImage: Activity.icon(for: live.category))
+                        .font(Theme.captionFont).fontWeight(.semibold)
+                        .foregroundColor(Color(hex: Activity.colorHex(for: live.category)))
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Color(hex: Activity.colorHex(for: live.category)).opacity(0.1))
+                        .cornerRadius(5)
+
+                    Text(live.title)
+                        .font(Theme.titleFont).foregroundColor(Theme.textPrimary)
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "calendar").font(.system(size: 12)).foregroundColor(Theme.textTertiary)
+                        Text(live.startDate, style: .date).font(Theme.captionFont).foregroundColor(Theme.textSecondary)
+                        if let end = live.endDate {
+                            Text("→").foregroundColor(Theme.textTertiary)
+                            Text(end, style: .date).font(Theme.captionFont).foregroundColor(Theme.textSecondary)
+                        }
+                    }
+
+                    if !live.description.isEmpty {
+                        Text(live.description)
+                            .font(Theme.bodyFont).foregroundColor(Theme.textSecondary)
+                            .padding(.top, 2)
+                    }
+                }
+                .padding(24)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(hex: Activity.colorHex(for: live.category)).opacity(0.05))
+
+                // ── 便利贴 ─────────────────────────────────────
+                PageSectionHeader(title: "便利贴", icon: "note.text")
+
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("共 \(live.stickyNotes.count) 张")
+                            .font(Theme.captionFont).foregroundColor(Theme.textSecondary)
+                        Spacer()
+                        Button { showAddNote = true } label: {
+                            Label("添加便利贴", systemImage: "plus")
+                                .font(.system(size: 13, weight: .medium))
+                        }
+                        .buttonStyle(.borderedProminent).tint(Theme.accent)
+                    }
+                    .padding(.horizontal, 24).padding(.top, 12)
+
+                    if live.stickyNotes.isEmpty {
+                        EmptyPlaceholder(icon: "note.text", title: "还没有便利贴", subtitle: "添加想法、会议记录或备忘")
+                    } else {
+                        LazyVGrid(columns: noteColumns, spacing: 12) {
+                            ForEach(live.stickyNotes) { note in
+                                StickyNoteCard(note: note, activityId: live.id)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                    }
+
+                    Spacer(minLength: 60)
+                }
+            }
+        }
+        .background(Theme.background)
+        .navigationTitle(live.title)
+        .sheet(isPresented: $showAddNote) {
+            AddStickyNoteSheet(activityId: live.id).environmentObject(store)
+        }
+    }
+}
+
+// MARK: - StickyNoteCard
+
+struct StickyNoteCard: View {
+    let note: StickyNote
+    let activityId: UUID
+    @EnvironmentObject var store: AppStore
+
+    @State private var isEditing = false
+    @State private var editedContent = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                HStack(spacing: 4) {
+                    ForEach(StickyNote.StickyColor.allCases, id: \.self) { c in
+                        Circle()
+                            .fill(Theme.stickyColor(c))
+                            .frame(width: 10, height: 10)
+                            .overlay(
+                                Circle().stroke(c == note.colorName ? Color.gray.opacity(0.5) : Color.clear, lineWidth: 1.5)
+                            )
+                            .onTapGesture {
+                                var updated = note; updated.colorName = c
+                                store.updateStickyNote(updated, in: activityId)
+                            }
+                    }
+                }
+                Spacer()
+                Button { store.deleteStickyNote(note.id, from: activityId) } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray.opacity(0.5))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if isEditing {
+                TextEditor(text: $editedContent)
+                    .font(.system(size: 13))
+                    .frame(minHeight: 70)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
+                HStack {
+                    Spacer()
+                    Button("保存") {
+                        var updated = note; updated.content = editedContent
+                        store.updateStickyNote(updated, in: activityId)
+                        isEditing = false
+                    }
+                    .font(.system(size: 11, weight: .semibold))
+                    .buttonStyle(.plain)
+                    .foregroundColor(Theme.accent)
+                }
+            } else {
+                Text(note.content)
+                    .font(.system(size: 13))
+                    .foregroundColor(Theme.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onTapGesture { editedContent = note.content; isEditing = true }
+            }
+
+            Spacer()
+
+            Text(note.createdAt, style: .date)
+                .font(.system(size: 10))
+                .foregroundColor(.gray.opacity(0.5))
+        }
+        .padding(12)
+        .frame(minHeight: 120)
+        .background(Theme.stickyColor(note.colorName))
+        .cornerRadius(8)
+        .shadow(color: .black.opacity(0.07), radius: 4, x: 0, y: 2)
+    }
+}
