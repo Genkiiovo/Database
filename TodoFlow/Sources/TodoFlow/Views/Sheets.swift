@@ -1,19 +1,6 @@
 import SwiftUI
 import AppKit
 
-// Forces the sheet's NSWindow to become key so TextFields accept input.
-// This is needed because NavigationSplitView retains key-window status on macOS.
-private struct SheetWindowFocuser: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let v = NSView()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            v.window?.makeKey()
-        }
-        return v
-    }
-    func updateNSView(_ nsView: NSView, context: Context) {}
-}
-
 // ─────────────────────────────────────────────
 // MARK: - AddCourseSheet
 // ─────────────────────────────────────────────
@@ -208,7 +195,7 @@ struct AddActivitySheet: View {
 
     @State private var title       = ""
     @State private var description = ""
-    @State private var category    = Activity.Category.project
+    @State private var category    = "项目"
     @State private var startDate   = Date()
     @State private var hasEndDate  = false
     @State private var endDate     = Date()
@@ -232,15 +219,23 @@ struct AddActivitySheet: View {
             VStack(spacing: 14) {
                 SheetField(label: "标题", placeholder: "例：学生会策划会议", text: $title)
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text("类型").font(Theme.captionFont).foregroundColor(Theme.textSecondary)
-                    Picker("", selection: $category) {
-                        ForEach(Activity.Category.allCases, id: \.self) { c in
-                            Text(c.rawValue).tag(c)
+                    SheetField(label: "", placeholder: "自定义类型，例：比赛、实习…", text: $category)
+                    // Quick-pick suggestion chips
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Activity.suggestedCategories, id: \.self) { s in
+                                Text(s)
+                                    .font(Theme.captionFont)
+                                    .padding(.horizontal, 10).padding(.vertical, 5)
+                                    .background(category == s ? Theme.accent.opacity(0.15) : Theme.inputBg)
+                                    .foregroundColor(category == s ? Theme.accent : Theme.textSecondary)
+                                    .cornerRadius(16)
+                                    .onTapGesture { category = s }
+                            }
                         }
                     }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -373,7 +368,16 @@ struct SheetContainer<Content: View, Trailing: View>: View {
         }
         .frame(minWidth: 460, maxWidth: 520)
         .background(Theme.background)
-        .background(SheetWindowFocuser())
+        .onAppear {
+            // Make the sheet window key so TextFields accept keyboard input on macOS
+            NSApp.activate(ignoringOtherApps: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                NSApp.windows
+                    .filter { $0.isVisible && $0.canBecomeKey }
+                    .max(by: { $0.windowNumber < $1.windowNumber })?
+                    .makeKeyAndOrderFront(nil)
+            }
+        }
     }
 }
 

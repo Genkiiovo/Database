@@ -134,7 +134,7 @@ final class AppStore: ObservableObject {
                 title: act.title,
                 date: act.startDate,
                 courseId: nil,
-                colorHex: act.category.colorHex
+                colorHex: Activity.colorHex(for: act.category)
             ))
         }
         return events.sorted { $0.date < $1.date }
@@ -178,14 +178,14 @@ final class AppStore: ObservableObject {
                 title: "学生会策划会议",
                 startDate: days(2),
                 description: "讨论五四晚会安排",
-                category: .meeting
+                category: "会议"
             ),
             Activity(
                 title: "NLP 科研训练项目",
                 startDate: days(-7),
                 endDate: days(60),
                 description: "基于大模型的情感分析研究",
-                category: .research
+                category: "研究"
             ),
         ]
         save()

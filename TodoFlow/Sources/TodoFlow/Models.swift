@@ -39,36 +39,31 @@ struct Activity: Identifiable, Codable {
     var startDate: Date
     var endDate: Date?
     var description: String = ""
-    var category: Category = .project
+    var category: String = "项目"   // free-form; was enum, kept as String for Codable compat
     var stickyNotes: [StickyNote] = []
     var createdAt: Date = Date()
 
-    enum Category: String, Codable, CaseIterable {
-        case project  = "项目"
-        case meeting  = "会议"
-        case event    = "活动"
-        case research = "研究"
-        case other    = "其他"
+    // Default suggestions shown in the add sheet
+    static let suggestedCategories = ["项目", "会议", "活动", "研究", "比赛", "实习", "社团", "其他"]
 
-        var icon: String {
-            switch self {
-            case .project:  return "target"
-            case .meeting:  return "person.2"
-            case .event:    return "calendar.badge.plus"
-            case .research: return "magnifyingglass"
-            case .other:    return "star"
-            }
+    static func icon(for category: String) -> String {
+        switch category {
+        case "项目":  return "target"
+        case "会议":  return "person.2"
+        case "活动":  return "calendar.badge.plus"
+        case "研究":  return "magnifyingglass"
+        case "比赛":  return "trophy"
+        case "实习":  return "briefcase"
+        case "社团":  return "person.3"
+        default:     return "star"
         }
+    }
 
-        var colorHex: String {
-            switch self {
-            case .project:  return "3B82F6"
-            case .meeting:  return "8B5CF6"
-            case .event:    return "F59E0B"
-            case .research: return "10B981"
-            case .other:    return "6B7280"
-            }
-        }
+    // Deterministic color per category name (same name → same color)
+    static func colorHex(for category: String) -> String {
+        let palette = ["3B82F6", "8B5CF6", "F59E0B", "10B981", "EF4444", "EC4899", "06B6D4", "84CC16"]
+        let hash = category.unicodeScalars.reduce(0) { $0 &+ Int($1.value) }
+        return palette[abs(hash) % palette.count]
     }
 }
 
